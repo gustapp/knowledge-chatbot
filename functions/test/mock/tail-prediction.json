@@ -1,0 +1,22 @@
+{
+  "responseId": "6f956f7c-e108-4db9-bc83-58bfeea8a406-32138632",
+  "queryResult": {
+    "queryText": "What is the religion of antoine_brutus_menier ?",
+    "parameters": {
+      "head": "antoine_brutus_menier",
+      "relation": "religion",
+      "tail": ""
+    },
+    "allRequiredParamsPresent": true,
+    "intent": {
+      "name": "projects/sofia-fb13/agent/intents/bf78f7ed-4d12-49fb-bfef-10c61e2bae63",
+      "displayName": "Link Prediction Intent"
+    },
+    "intentDetectionConfidence": 1,
+    "languageCode": "en"
+  },
+  "originalDetectIntentRequest": {
+    "payload": {}
+  },
+  "session": "projects/sofia-fb13/agent/sessions/24ab0266-9790-a691-9856-31a997cc4a91"
+}
