@@ -3,8 +3,40 @@ import OpenKE.models as models
 import tensorflow as tf
 import numpy as np
 import json
+from flask import jsonify
 
-def sofia_fb13_fulfillment(request):
+""" Load TransE FB13 Knowledge Embedding """
+from os import path
+root = path.dirname(path.abspath(__file__))
+
+con = config.Config()
+
+fb13_path = path.join(root, 'OpenKE/benchmarks/FB13/')
+ke_path =  path.join(root, 'OpenKE/res/model.vec.tf')
+
+con.set_in_path(fb13_path)
+con.set_work_threads(4)
+con.set_dimension(50)
+con.set_import_files(ke_path)
+con.init()
+con.set_model(models.TransE)
+
+""" Load Dictionaries: 
+    * relation2id
+    * entity2id
+"""
+entity2id_path = path.join(root, 'OpenKE/benchmarks/FB13/entity2id.txt')
+relation2id_path = path.join(root, 'OpenKE/benchmarks/FB13/relation2id.txt')
+
+import pandas as pd
+e2i_df = pd.read_csv(entity2id_path, sep='\t', header=None, skiprows=[0])
+e2i_df.columns = ['entity', 'id']
+    
+r2i_df = pd.read_csv(relation2id_path, sep='\t', header=None, skiprows=[0])
+r2i_df.columns = ['relation', 'id']
+
+
+def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
     """Responds to any HTTP request.
     Args:
         request (flask.Request): HTTP request object.
@@ -20,48 +52,15 @@ def sofia_fb13_fulfillment(request):
     e_h = parameters['head']
     r = parameters['relation']
 
-    """ Load TransE FB13 Knowledge Embedding """
-    from os import path
-    root = path.dirname(path.abspath(__file__))
-
-    con = config.Config()
-
-    fb13_path = path.join(root, 'OpenKE/benchmarks/FB13/')
-    ke_path =  path.join(root, 'OpenKE/res/model.vec.tf')
-
-    con.set_in_path(fb13_path)
-    con.set_test_link_prediction(True)
-    con.set_test_triple_classification(True)
-    con.set_work_threads(4)
-    con.set_dimension(50)
-    con.set_import_files(ke_path)
-    con.init()
-    con.set_model(models.TransE)
-
-    """ Load Dictionaries: 
-        * relation2id
-        * entity2id
-    """
-    entity2id_path = path.join(root, 'OpenKE/benchmarks/FB13/entity2id.txt')
-    relation2id_path = path.join(root, 'OpenKE/benchmarks/FB13/relation2id.txt')
-
-    import pandas as pd
-    e2i_df = pd.read_csv(entity2id_path, sep='\t', header=None, skiprows=[0])
-    e2i_df.columns = ['entity', 'id']
-    
-    r2i_df = pd.read_csv(relation2id_path, sep='\t', header=None, skiprows=[0])
-    r2i_df.columns = ['relation', 'id']
-
     """ What is the religion ? """
-    eh_id = e2i_df[e2i_df['entity'] == e_h]['id'][0]
-    r_id = r2i_df[r2i_df['relation'] == r]['id'][0]
+    eh_id = e2i_df[e2i_df['entity'] == e_h]['id'].values[0]
+    r_id = r2i_df[r2i_df['relation'] == r]['id'].values[0]
 
     res_id = con.predict_tail_entity(h=eh_id, r=r_id, k=1)
 
     response = e2i_df[e2i_df['id'] == res_id[0]]['entity']
 
     """Wrap all return data into JSON"""
-    from flask import jsonify
 
     return jsonify({ "fulfillmentText": "{}'s {} is {}".format(e_h, r, str(response.values[0])) })
 

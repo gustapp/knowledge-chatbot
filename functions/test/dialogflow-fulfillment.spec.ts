@@ -25,4 +25,20 @@ describe("POST /sofia_fb13_fullfilment - fulfillment function endpoint", ()=> {
                     .to.be.equal(`{"fulfillmentText":"antoine_brutus_menier's religion is catholicism"}\n`);
         });
     });
+    /**
+     * @user  Tell me 2 profession monarchs  ? 
+     * @chatbot monarch1, monarch2
+     */
+    it("Predict Head: Should return tail: `Monarchs`", () => {
+
+        return false;
+    });
+    /**
+     * @user  antoine_brutus_menier's religion is catholicism ? 
+     * @chatbot Yes
+     */
+    it("Predict Triple: Should return veracity: `Yes`", () => {
+
+        return false;
+    });
 });
