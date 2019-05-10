@@ -461,7 +461,7 @@ class Config(object):
 				print("triple (%d,%d,%d) is correct" % (h, t, r))
 			else:
 				print("triple (%d,%d,%d) is wrong" % (h, t, r))
-			return
+			return res < thresh
 		self.lib.getValidBatch(self.valid_pos_h_addr, self.valid_pos_t_addr, self.valid_pos_r_addr, self.valid_neg_h_addr, self.valid_neg_t_addr, self.valid_neg_r_addr)
 		res_pos = self.test_step(self.valid_pos_h, self.valid_pos_t, self.valid_pos_r)
 		res_neg = self.test_step(self.valid_neg_h, self.valid_neg_t, self.valid_neg_r)
@@ -470,3 +470,4 @@ class Config(object):
 			print("triple (%d,%d,%d) is correct" % (h, t, r))
 		else:
 			print("triple (%d,%d,%d) is wrong" % (h, t, r))
+		return (res < self.relThresh[r], res)
