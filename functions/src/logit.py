@@ -1,7 +1,10 @@
 #%%
 # Parameters
-target_rel = 'religion'
-label = 'judaism'
+# religion       : judaism
+# religion       : christian
+# cause_of_death : crucifixion 
+target_rel = 'cause_of_death'
+label = 'crucifixion'
 
 #%%
 # Load data
@@ -19,20 +22,25 @@ def replace_target(item, label=label):
         return 0
 
 df[target_rel] = df[target_rel].apply(replace_target)
+target = df.pop(target_rel)
+
 df.head()
 
 #%%
 # Encode labels to categorical features
 from sklearn.preprocessing import LabelEncoder
 
-le = LabelEncoder()
+intrp_label = []
+for column in df:
+    le = LabelEncoder()
+    df[column] = le.fit_transform(df[column])
+    intrp_label += map(lambda x: '{}:{}'.format(column, x), list(le.classes_))
 
-df = df.apply(le.fit_transform)
 df.head()
 
-#%%
-# Split target
-target = df.pop(target_rel)
+# #%%
+# # Split target
+# target = df.pop(target_rel)
 
 #%%
 # Encode one hot 
@@ -41,9 +49,6 @@ from sklearn.preprocessing import OneHotEncoder
 
 ohc = OneHotEncoder()
 out = ohc.fit_transform(df)
-
-# Recover original
-np.array([ohc.active_features_[col] for col in out.sorted_indices().indices]).reshape(1000, 13 - 1) - ohc.feature_indices_[:-1]
 
 #%%
 # Full set
@@ -70,3 +75,11 @@ from sklearn.metrics import confusion_matrix
 confusion_matrix = confusion_matrix(y_test, y_pred)
 print(confusion_matrix)
 
+#%%
+# Feature Importance (why jesus religion is judaism?)
+weights = logreg.coef_
+labels = intrp_label
+
+exp_df = pd.DataFrame(data={'labels': labels, 'weights': weights[0]})
+exp_df.sort_values('weights', inplace=True, ascending=False)
+exp_df.head(3)
