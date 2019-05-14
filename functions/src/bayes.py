@@ -1,11 +1,11 @@
 #%%
 # Parameters
 # jesus
-# religion       : judaism
-# religion       : christian
-# cause_of_death : crucifixion 
+# religion       : judaism (Meh)
+# religion       : christian (Great Success)
+# cause_of_death : crucifixion
 target_rel = 'religion'
-label = 'judaism'
+label = 'christian'
 
 #%%
 # Load data
@@ -78,10 +78,32 @@ confusion_matrix = confusion_matrix(y_test, y_pred)
 print(confusion_matrix)
 
 #%%
-# Feature Importance (why jesus religion is judaism?)
-weights = mnb.coef_
+# Explanation probabilistic reasoning
+ls_data = []
+ln_data = []
+""" log p(x_i|y'), log p(x_i|y) """
+for log_neg_lkh, log_pos_lkh in np.transpose(mnb.feature_log_prob_):
+  neg_lkh = 10 ** log_neg_lkh
+  pos_lkh = 10 ** log_pos_lkh
+
+  """ Sufficiency Likelihood Ratio (LS):
+      ls = p(x_i|y) / p(x_i|y') 
+  """
+  ls = pos_lkh / neg_lkh
+
+  """ Necessity Likelihood Ratio (LS):
+      ln = p(x_i'|y) / p(x_i'|y') 
+  """
+  ln = (1 - pos_lkh) / (1 - neg_lkh)
+
+  ls_data.append(ls)
+  ln_data.append(ln)
+
+#%%
+# Feature Importance
+# weights = mnb.coef_
 labels = intrp_label
 
-exp_df = pd.DataFrame(data={'labels': labels, 'weights': weights[0]})
-exp_df.sort_values('weights', inplace=True, ascending=False)
-exp_df.head(3)
+exp_df = pd.DataFrame(data={'labels': labels, 'LS': ls_data, 'LN': ln_data})
+exp_df.sort_values('LS', inplace=True, ascending=False)
+exp_df.head(50)
