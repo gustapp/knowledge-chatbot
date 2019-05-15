@@ -77,7 +77,7 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
     e = eh_vec
     n_instances = 1000
     dimension = 100
-    noise_rate = 0.05
+    noise_rate = 0.03
 
     e_hat = []
     for i in range(0, n_instances):
@@ -85,13 +85,14 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
         e_hat.append(e + noise)
 
     """ Minimize search area by choosing only the nearest neighbors """
-    head_ent = eh_id 
+    head_ent = eh_id
     rel = r_id
 
-    k_nn = 10
+    k_nn = 5
     feats_tb = []
     """ discover head entity features """
-    for rel_id in range(0,13):
+    # for rel_id in range(0,13):
+    for rel_id in [0, 3, 4, 6, 7, 12]:
         feat_candidates_per_relation = con.predict_tail_entity(h=head_ent, r=rel_id, k=k_nn)
         feats_tb.append((ke_rel[rel_id], [(ent_id, ke_ent[ent_id]) for ent_id in feat_candidates_per_relation]))
 
@@ -114,14 +115,16 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
         print(str(len(e_hat_feats)))
 
     """ Build local dataset """
-    feats_names = ['religion', 'cause_of_death', 'place_of_death', 'profession', 'location', 'gender', 'nationality', 'place_of_birth', 'institution', 'children', 'parents', 'spouse', 'ethnicity']
+    # feats_names = ['religion', 'cause_of_death', 'place_of_death', 'profession', 'location', 'gender', 'nationality', 'place_of_birth', 'institution', 'children', 'parents', 'spouse', 'ethnicity']
+    feats_names = ['religion', 'profession', 'location', 'nationality', 'place_of_birth', 'ethnicity']
     e_hat_feats_df = pd.DataFrame(data=list(map(list,zip(*e_hat_feats))), columns=feats_names)
-    e_hat_feats_df = e_hat_feats_df.applymap(lambda id: e2i_df[e2i_df['id'] == id]['entity'].values[0])
+    # e_hat_feats_df = e_hat_feats_df.applymap(lambda id: e2i_df[e2i_df['id'] == id]['entity'].values[0])
     
     """ *** Interpretable Model *** """
     
     target_rel = r
-    label = response
+    # label = response.values[0]
+    label = res_id[0]
 
     """ Replace target tail """
     def replace_target(item, label=label):
@@ -132,8 +135,7 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
 
     df = e_hat_feats_df
 
-    # BROKEN HERE !!!!!
-    df[target_rel] = e_hat_feats_df[target_rel].apply(replace_target)
+    df[target_rel] = df[target_rel].apply(replace_target)
     target = df.pop(target_rel)
 
     """ Encode labels to categorical features """
@@ -156,6 +158,35 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
     X = out
     y = target
 
+    # """ Logistic Regression """
+    # from sklearn.metrics import mean_squared_error, accuracy_score
+    # from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+    # from sklearn.linear_model import LogisticRegression
+    # from sklearn.model_selection import train_test_split
+
+    # """ Train Logit """
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
+    # logreg = LogisticRegression()
+    # logreg.fit(X_train, y_train)
+
+    # """ (Log) Logit Accuracy """
+    # y_pred = logreg.predict(X_test)
+    # print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(logreg.score(X_test, y_test)))
+
+    # """ (Log) Logit Confusion Matrix """
+    # from sklearn.metrics import confusion_matrix
+    # confusion_matrix = confusion_matrix(y_test, y_pred)
+    # print(confusion_matrix)
+
+    # """ Feature Importance """
+    # weights = logreg.coef_
+    # labels = intrp_label
+
+    # exp_df = pd.DataFrame(data={'labels': labels, 'weights': weights[0]})
+    # exp_df.sort_values('weights', inplace=True, ascending=False)
+    
+    # reason = exp_df.head(1)['labels'].values[0]
+
     """ Naive Bayes """
     from sklearn.metrics import mean_squared_error, accuracy_score
     from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
@@ -167,14 +198,14 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
     mnb = MultinomialNB()
     mnb.fit(X_train.toarray(), y_train)
 
-    """ (Log) Accuracy """
-    y_pred = mnb.predict(X_test.toarray())
-    print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(accuracy_score(y_pred, y_test)))
+    # """ (Log) Accuracy """
+    # y_pred = mnb.predict(X_test.toarray())
+    # print('Accuracy of logistic regression classifier on test set: {:.2f}'.format(accuracy_score(y_pred, y_test)))
 
-    """ (Log) Confusion Matrix """
-    from sklearn.metrics import confusion_matrix
-    confusion_matrix = confusion_matrix(y_test, y_pred)
-    print(confusion_matrix)
+    # """ (Log) Confusion Matrix """
+    # from sklearn.metrics import confusion_matrix
+    # confusion_matrix = confusion_matrix(y_test, y_pred)
+    # print(confusion_matrix)
 
     """ Explanation probabilistic reasoning """
     ls_data = []
@@ -203,25 +234,54 @@ def sofia_fb13_fulfillment(request, con=con, e2i_df=e2i_df, r2i_df=r2i_df):
     exp_df = pd.DataFrame(data={'labels': labels, 'LS': ls_data, 'LN': ln_data})
     exp_df.sort_values('LS', inplace=True, ascending=False)
     
+    """ Top-1 reason """
     explanation = exp_df.head(1)
+    # explanation = exp_df.loc[exp_df['labels'] == reason]
+
+    exp_rel = explanation['labels'].values[0].split(':')[0]
+    exp_val_id = explanation['labels'].values[0].split(':')[1]
+
+    exp_val = e2i_df[e2i_df['id'] == int(exp_val_id)]['entity'].values[0]
+
+    exp_ls = explanation['LS'].values[0]
+    exp_ln = explanation['LN'].values[0]
+
+    """ Explanation by prob reasoning """
+    thresh = 0.5
+    exp_text = ''
+
+    """ Positive Likelihood Ratio Analysis """
+    if exp_ls > 1 + thresh:
+        exp_text += 'because the fact that his {} is {} conducts to this conclusion (LS={:.2f}), '.format(exp_rel, exp_val, exp_ls)
+    elif exp_ls < 1 + thresh and exp_ls > 1 - thresh:
+        exp_text += 'because despite the fact that his {} is {} is indifferent to this conclusion (LS={:.2f}), '.format(exp_rel, exp_val, exp_ls)
+    else:
+        exp_text += 'because despite the fact that his {} is {} is not favorable to this conclusion (LS={:.2f}), '.format(exp_rel, exp_val, exp_ls)
+    
+    """ Negative Likelihood Ratio Analysis """
+    if exp_ln > 1 + thresh:
+        exp_text += 'its absence conducts is favorable (LN={:.2f}).'.format(exp_ln)
+    elif exp_ln < 1 + thresh and exp_ln > 1 - thresh:
+        exp_text += 'while its absence is indifferent (LN={:.2f}).'.format(exp_ln)
+    else:
+        exp_text += 'while it is necessary condition (LN={:.2f}).'.format(exp_ln)
 
     """Wrap all return data into JSON"""
+    return jsonify({ "fulfillmentText": "{}'s {} is {}, {}".format(e_h, r, str(response.values[0]), exp_text) })
 
-    return jsonify({ "fulfillmentText": "{}'s {} is {}, because {}".format(e_h, r, str(response.values[0]), explanation.values[0]) })
+# if __name__ == "main":
+#     """ Runs python 3.7 Cloud Functions locally
+#     Conditions:
+#         * __main__ : being run directly
+#         * main : being run on debugger
 
-if __name__ == "main":
-    """ Runs python 3.7 Cloud Functions locally
-    Conditions:
-        * __main__ : being run directly
-        * main : being run on debugger
+#         Flask app wrapper
+#     """
+#     from flask import Flask, request
+#     app = Flask(__name__)
 
-        Flask app wrapper
-    """
-    from flask import Flask, request
-    app = Flask(__name__)
+#     @app.route('/sofia_fb13_fullfilment', methods=['GET', 'POST'])
+#     def get_sofia_fb13_fulfillment():
+#         return sofia_fb13_fulfillment(request)
 
-    @app.route('/sofia_fb13_fullfilment', methods=['GET', 'POST'])
-    def get_sofia_fb13_fulfillment():
-        return sofia_fb13_fulfillment(request)
-
-    app.run('localhost', 5000, debug=True)
+#     app.run('localhost', 5000, debug=True)
